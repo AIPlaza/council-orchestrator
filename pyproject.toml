@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "council-orchestrator"
+version = "1.0.0"
+description = "Deterministic Multi-Agent LLM Council Orchestrator (Karpathy Methodology)"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "AIPlaza / ACCET Ecosystem" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+dependencies = []
+
+[project.scripts]
+council-orchestrator = "server:main"

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: council-orchestrator
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: MCP_BACKEND
+        value: omniroute
+      - key: MCP_BYPASS_AUTH
+        value: "0"

@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+sessions/
+.mcp_secret.json
+mcp_tokens.json
+.DS_Store
