@@ -279,7 +279,7 @@ def generate_html_report(session_data: dict, output_path: str):
 <body>
     <div class="container">
         <header>
-            <h1>🏛️ Dictamen del Consejo Agéntico Determinista</h1>
+            <h1>🏛️ {"[MOCK] " if session_data.get("mock") else ""}Dictamen del Consejo Agéntico Determinista</h1>
             <div class="meta">Protocolo: STD-AGT-COUNCIL-001 | Sesión: {ts} | Backend: {session_data.get('backend')}</div>
         </header>
 
@@ -315,8 +315,14 @@ def main():
     parser.add_argument("--file", "-f", type=str, help="Ruta a un archivo .prompt.md o .md con el framed problem.")
     parser.add_argument("--backend", "-b", type=str, default="agy", choices=["agy", "omniroute"], help="Motor de inferencia.")
     parser.add_argument("--mock", action="store_true", help="Ejecuta en modo simulación rápida sin llamar a la CLI.")
+    parser.add_argument("--dry-run", action="store_true", help="Requerido para usar --mock.")
     parser.add_argument("--parallel", action="store_true", default=True, help="Ejecuta los 5 asesores en paralelo.")
+    parser.add_argument("--tag", "-t", type=str, default="", help="Etiqueta identificadora para los nombres de archivo de salida.")
     args = parser.parse_args()
+
+    if args.mock and not args.dry_run:
+        print("❌ Error: No se permite --mock a menos que se especifique --dry-run.")
+        sys.exit(1)
 
     # Resolver problema
     framed_problem = ""
@@ -396,15 +402,18 @@ def main():
         "chairman_synthesis": chairman_synthesis
     }
 
-    json_path = os.path.join(SESSIONS_DIR, f"{timestamp}_council_session.json")
-    md_path = os.path.join(SESSIONS_DIR, f"{timestamp}_council_session.md")
-    html_path = os.path.join(SESSIONS_DIR, f"{timestamp}_report.html")
+    mock_prefix = "MOCK_" if args.mock else ""
+    tag_suffix = f"_{args.tag}" if args.tag else ""
+    json_path = os.path.join(SESSIONS_DIR, f"{mock_prefix}{timestamp}{tag_suffix}_council_session.json")
+    md_path = os.path.join(SESSIONS_DIR, f"{mock_prefix}{timestamp}{tag_suffix}_council_session.md")
+    html_path = os.path.join(SESSIONS_DIR, f"{mock_prefix}{timestamp}{tag_suffix}_report.html")
 
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(session_data, f, ensure_ascii=False, indent=2)
 
     # Markdown output
-    md_content = f"""# Sesión de Consejo Agéntico: {timestamp}
+    md_mock_str = "[MOCK] " if args.mock else ""
+    md_content = f"""# {md_mock_str}Sesión de Consejo Agéntico: {timestamp}
 **Norma:** STD-AGT-COUNCIL-001  
 **Backend:** {args.backend} | **Mock:** {args.mock}
 
@@ -445,6 +454,12 @@ def main():
     for line in chairman_synthesis.split("\n")[:15]:
         print(line)
     print("...\n")
+
+    if args.tag.startswith("COUNCIL_AUDIT_ROUTER_"):
+        audit_sessions = [f for f in os.listdir(SESSIONS_DIR) if f.endswith(f"_{args.tag}_council_session.json")]
+        if len(audit_sessions) >= 6 and "non_compliant" in chairman_synthesis.lower():
+            print(f"The council did not agree after 5 retries. Please review: {html_path}")
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()

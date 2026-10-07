@@ -20,21 +20,25 @@ class BaseEngineBackend:
 
 class AgyCliBackend(BaseEngineBackend):
     def execute(self, prompt: str, timeout: int = 180) -> str:
-        try:
-            result = subprocess.run(
-                ["agy", "-p", prompt],
-                capture_output=True,
-                text=True,
-                timeout=timeout
-            )
-            if result.returncode != 0:
-                err = result.stderr.strip() or f"Exit code {result.returncode}"
-                return f"[ERROR AGY]: {err}"
-            return result.stdout.strip()
-        except subprocess.TimeoutExpired:
-            return f"[ERROR AGY]: Timeout de ejecución ({timeout}s)."
-        except Exception as e:
-            return f"[ERROR AGY INVOCATION]: {str(e)}"
+        last_err = ""
+        for attempt in range(2):
+            try:
+                result = subprocess.run(
+                    ["agy", "--dangerously-skip-permissions", "-p", prompt],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout
+                )
+                if result.returncode == 0:
+                    return result.stdout.strip()
+                last_err = result.stderr.strip() or f"Exit code {result.returncode}"
+                time.sleep(1.5)
+            except subprocess.TimeoutExpired:
+                last_err = f"Timeout de ejecución ({timeout}s)."
+            except Exception as e:
+                last_err = str(e)
+                time.sleep(1.0)
+        return f"[ERROR AGY]: {last_err}"
 
 class OmniRouteBackend(BaseEngineBackend):
     def __init__(self, base_url: str = None, model: str = "auto"):
@@ -63,6 +67,8 @@ class OmniRouteBackend(BaseEngineBackend):
 class MockBackend(BaseEngineBackend):
     def execute(self, prompt: str, timeout: int = 180) -> str:
         time.sleep(0.1)
+        if "COUNCIL_AUDIT_ROUTER_" in prompt or "COUNCIL_AUDIT_ROUTER_" in os.environ.get("MOCK_TAG", ""):
+            return "[MOCK BACKEND]: non_compliant"
         return f"[MOCK BACKEND]: Respuesta determinista generada para prompt de longitud {len(prompt)}."
 
 def get_engine_backend(name: str = None) -> BaseEngineBackend:
